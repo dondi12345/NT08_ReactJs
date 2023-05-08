@@ -1,0 +1,6 @@
+npm i express --save
+npm i --save-dev @types/express
+npm i nodemon --save-dev
+npm i morgan --save-dev
+npm i --save-dev @types/morgan
+npm i express-handlebars --save
