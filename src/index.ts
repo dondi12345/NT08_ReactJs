@@ -11,6 +11,15 @@ const port = 3000
 //HTTP logger
 app.use(morgan('combined'));
 
+import Handlebars from 'handlebars';
+
+export const func = Handlebars.registerHelper('times', function(n, block) {
+    var accum = '';
+    for(var i = 0; i < n; ++i)
+        accum += block.fn(i);
+    return accum;
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.engine('handlebars', engine());
