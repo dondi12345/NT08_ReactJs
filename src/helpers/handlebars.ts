@@ -1,5 +1,5 @@
 module.exports ={
-    equal: (a,b) =>{
+    equal: (a: any,b: any) =>{
         if(a==b){
             return true;
         }else{
@@ -7,7 +7,7 @@ module.exports ={
         }
     },
 
-    more : (a,b) =>{
+    more : (a:any,b:any) =>{
         let f = parseInt(a);
         let s = parseInt(b);
         if(f>s){
@@ -17,7 +17,7 @@ module.exports ={
         }
     },
 
-    mod: (a,b)=>{
+    mod: (a:any,b:any)=>{
         let f = parseInt(a);
         let s = parseInt(b);
         if(f%s==0){
@@ -28,7 +28,7 @@ module.exports ={
 
     },
 
-    diff: (a) =>{
+    diff: (a:any) =>{
         if(a){
             return false
         }else{
@@ -36,10 +36,19 @@ module.exports ={
         }
     },
     
-    sum: (a,b) => {
+    sum: (a:any,b:any) => {
         let sum = parseInt(a) + parseInt(b);
         return sum;
     },
 
-    multi: (a,b) => a*b,
+    multi: (a:any,b:any) => a*b,
 }
+
+import Handlebars from 'handlebars';
+
+export const func = Handlebars.registerHelper('times', function(n, block) {
+    var accum = '';
+    for(var i = 0; i < n; ++i)
+        accum += block.fn(i);
+    return accum;
+});
