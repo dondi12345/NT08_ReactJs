@@ -9,7 +9,7 @@ const app = express()
 const port = 3000
 
 //HTTP logger
-app.use(morgan('combined'));
+// app.use(morgan('combined'));
 
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -29,6 +29,10 @@ app.get('/', (req, res) => {
 app.get('/about', (req, res) => {
   res.render('about');
 });
+
+app.get('/partial', (req, res)=>{
+  res.render('partials/card_carousel')
+})
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
