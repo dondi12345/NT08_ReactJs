@@ -31,7 +31,7 @@ app.get('/about', (req, res) => {
 });
 
 app.get('/partial', (req, res)=>{
-  res.render('partials/card_carousel')
+  res.render('partials/test')
 })
 
 app.listen(port, () => {
