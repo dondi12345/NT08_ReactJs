@@ -48,7 +48,7 @@ import Handlebars from 'handlebars';
 
 export const func = Handlebars.registerHelper('times', function(n, block) {
     var accum = '';
-    for(var i = 0; i < n; ++i)
-        accum += block.fn(i);
+    for(var index = 0; index < n; ++index)
+        accum += block.fn(index);
     return accum;
 });

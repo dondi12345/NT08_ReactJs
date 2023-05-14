@@ -1,11 +1,16 @@
-
-{{!-- <div class="main-carousel" data-flickity = '{ "wrapAround": true, "autoPlay":3000, "prevNextButtons": false, "pageDots": false, "pauseAutoPlayOnClick": false}'> --}}
+<div class="mt-5 mb-5">
 <div class="main-carousel" data-flickity = '{ "wrapAround": true,"autoPlay":2500, "freeScroll": true, "prevNextButtons": false, "pageDots": false, "pauseAutoPlayOnClick": false}'>
-  {{#times 10}}
-    {{>card_carousel index = @index}}
-     
-  {{/times}}
+    {{>card_carousel index = 1}}
+    {{>card_carousel index = 2}}
+    {{>card_carousel index = 3}}
+    {{>card_carousel index = 4}}
+    {{>card_carousel index = 5}}
+    {{>card_carousel index = 6}}
+    {{>card_carousel index = 7}}
+    {{>card_carousel index = 8}}
+    {{>card_carousel index = 9}}
 </div>
+
 {{{about}}}
 <h1>H1</h1>
 <h1>H1</h1>
@@ -35,3 +40,4 @@
 <h1>H1</h1>
 <h1>H1</h1>
 <h1>H1</h1>
+</div>

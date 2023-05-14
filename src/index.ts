@@ -29,8 +29,14 @@ app.get('/', (req, res) => {
 app.get('/about', (req, res) => {
   res.render('about');
 });
+app.get('/games', (req, res) => {
+  res.render('list-games');
+});
+app.get('/contact', (req, res) => {
+  res.render('contact');
+});
 
-app.get('/partial', (req, res)=>{
+app.get('/test', (req, res)=>{
   res.render('partials/test')
 })
 
