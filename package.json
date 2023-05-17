@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon --exec ts-node src/index.ts",
-    "watch": "node-sass --watch src/resources/scss/ --output src/public/css/"
+    "start-dev": "nodemon --exec ts-node src/index.ts",
+    "start": "node  ./build/index.js",
+    "watch": "node-sass --watch src/resources/scss/ --output src/public/css/",
+    "build": "tsc -p ."
   },
   "license": "MIT",
   "dependencies": {
@@ -18,7 +20,7 @@
     "font-awesome": "^4.7.0",
     "react-slick": "^0.29.0",
     "sass": "^1.62.1",
-    "typescript": "^5.0.4"
+    "tsc": "^2.0.4"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
@@ -26,6 +28,7 @@
     "@types/nodemon": "^1.19.2",
     "morgan": "^1.10.0",
     "nodemon": "^2.0.22",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
   }
 }
