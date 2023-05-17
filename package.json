@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start-dev": "nodemon --exec ts-node src/index.ts",
-    "start": "node  ./build/index.js",
+    "start": "node  ./src/index.js",
     "watch": "node-sass --watch src/resources/scss/ --output src/public/css/",
     "build": "tsc -p ."
   },
