@@ -22,6 +22,7 @@ app.get('/', function (req, res) {
     res.render('home');
 });
 app.get('/test', function (req, res) {
+    console.log("Test");
     res.send("Hello");
 });
 app.get('/about', function (req, res) {
