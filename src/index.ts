@@ -27,6 +27,7 @@ app.get('/', (req, res) => {
   res.render('home');
 });
 app.get('/test', (req, res) => {
+  console.log("Test");
   res.send("Hello");
 });
 app.get('/about', (req, res) => {
