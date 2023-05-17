@@ -24,7 +24,10 @@ app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, '/resources/views'));
 
 app.get('/', (req, res) => {
-  res.render("Hello");
+  res.render('home');
+});
+app.get('/test', (req, res) => {
+  res.send("Hello");
 });
 app.get('/about', (req, res) => {
   res.render('about');

@@ -21,6 +21,9 @@ app.set('views', path_1.default.join(__dirname, '/resources/views'));
 app.get('/', function (req, res) {
     res.render('home');
 });
+app.get('/test', function (req, res) {
+    res.send("Hello");
+});
 app.get('/about', function (req, res) {
     res.render('about');
 });
