@@ -6,7 +6,7 @@ import { engine } from 'express-handlebars';
 import sass from 'sass';
 
 const app = express()
-const port = 3000
+const port = 8000
 
 //HTTP logger
 // app.use(morgan('combined'));
