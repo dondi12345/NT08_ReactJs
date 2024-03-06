@@ -44,13 +44,6 @@ app.get('/test', (req, res)=>{
   res.render('partials/test')
 })
 
-app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.headers.host === 'nt08.ntdream.click') {
-      return res.redirect(301, `http://nt08.ntdream.click:${port}${req.url}`);
-    }
-    next();
-  });
-
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
