@@ -1,6 +1,6 @@
 //nodemon --exec ts-node src/index.ts
 import path from 'path';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import morgan  from 'morgan';
 import { engine } from 'express-handlebars';
 import sass from 'sass';
@@ -43,6 +43,13 @@ app.get('/contact', (req, res) => {
 app.get('/test', (req, res)=>{
   res.render('partials/test')
 })
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.headers.host === 'nt08.ntdream.click') {
+      return res.redirect(301, `http://nt08.ntdream.click:${port}${req.url}`);
+    }
+    next();
+  });
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
