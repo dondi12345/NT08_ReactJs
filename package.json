@@ -5,7 +5,7 @@
   "scripts": {
     "start-1": "nodemon --exec ts-node src/index.ts",
     "start": "node  ./build/index.js",
-    "build": "tsc -p .",
+    "build": "tsc",
     "watch": "node-sass --watch src/resources/scss/ --output src/public/css/",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d src"
@@ -33,7 +33,7 @@
     "morgan": "^1.10.0",
     "nodemon": "^2.0.22",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.4"
+    "typescript": "^5.5.3"
   },
   "homepage": "http://dondi12345.github.io/NT08_ReactJs",
   "author": "",
