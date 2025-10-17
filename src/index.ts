@@ -52,12 +52,3 @@ const server = http.createServer(app);
 server.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
-
-const options = {
-    key: fs.readFileSync("server.key"),
-    cert: fs.readFileSync("server.crt"),
-};
-const server_ssl = https.createServer(options,app);
-server_ssl.listen(port_ssl, "0.0.0.0", () => {
-    console.log(`Worker ${process.pid} API listening on port: ${port_ssl}`);
-});
