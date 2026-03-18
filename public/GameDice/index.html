@@ -1,108 +1,215 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Unity Web Player | Yahtzee</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #000;
-      }
-      
-      #unity-container {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        left: 0;
-        top: 0;
-      }
-      
-      #unity-canvas {
-        width: 100%;
-        height: 100%;
-        object-fit: contain; /* or 'cover' to fill the entire area */
-        background-color: #231F20;
-      }
-      
-      /* Optional: Adjust loading bar position */
-      #unity-loading-bar {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        display: none;
-      }
-      
-      #unity-warning {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 10%;
-        z-index: 1000;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="unity-container">
-      <canvas id="unity-canvas" tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"></div>
-      <div id="unity-footer">
-        <div id="unity-logo-title-footer"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">Yahtzee</div>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Unity Web Player | Yahtzee</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+  <link rel="stylesheet" href="TemplateData/style.css">
+  <style>
+    body { margin:0; padding:0; overflow:hidden; background:#000; }
+    #unity-container { position:absolute; width:100%; height:100%; }
+    #unity-canvas { width:100%; height:100%; object-fit:contain; background:#231F20; }
+    #unity-loading-bar { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:none; }
+    #cache-status { 
+      position: absolute; 
+      bottom: 10px; 
+      right: 10px; 
+      color: rgba(255,255,255,0.7); 
+      font-family: Arial, sans-serif; 
+      font-size: 12px; 
+      background: rgba(0,0,0,0.6); 
+      padding: 6px 12px; 
+      border-radius: 20px; 
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #clear-cache-btn {
+      background: rgba(255,70,70,0.8);
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #clear-cache-btn:hover {
+      background: rgba(255,40,40,1);
+    }
+    #clear-cache-btn:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+  <div id="unity-container">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="unity-loading-bar">
+      <div id="unity-logo"></div>
+      <div id="unity-progress-bar-empty">
+        <div id="unity-progress-bar-full"></div>
       </div>
     </div>
-    
-    <script>
-      var canvas = document.querySelector("#unity-canvas");
-      var container = document.querySelector("#unity-container");
+    <div id="unity-warning"></div>
+    <div id="unity-footer">
+      <div id="unity-logo-title-footer"></div>
+      <div id="unity-fullscreen-button"></div>
+      <div id="unity-build-title">Yahtzee</div>
+    </div>
+  </div>
+  <div id="cache-status">
+    <span id="cache-message">Initializing...</span>
+    <button id="clear-cache-btn">Clear Cache</button>
+  </div>
 
-      function unityShowBanner(msg, type) {
-        var warningBanner = document.querySelector("#unity-warning");
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
+  <script>
+    // ==================== INDEXEDDB CACHE MANAGER ====================
+    const CacheManager = (function() {
+      const DB_NAME = 'UnityYahtzeeCache';
+      const DB_VERSION = 5;
+      const STORE_NAME = 'files';
+
+      const fileList = {
+        'Build/GameWeb.data': { key: 'GameWeb.data' },
+        'Build/GameWeb.wasm': { key: 'GameWeb.wasm' },
+        'Build/GameWeb.framework.js': { key: 'GameWeb.framework.js' }
+      };
+
+      let db = null;
+      let initPromise = null;
+
+      function initDB() {
+        if (initPromise) return initPromise;
+        initPromise = new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            db = request.result;
+            updateCacheMessage('Connected');
+            resolve(db);
+          };
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              db.createObjectStore(STORE_NAME);
+            }
+          };
+        });
+        return initPromise;
       }
 
-      // Handle window resize
-      function handleResize() {
-        // The canvas will automatically scale with CSS
-        // This ensures the Unity instance knows about the new size
-        if (unityInstance) {
-          // Optionally trigger a resize event in Unity if needed
+      async function getFile(url) {
+        await initDB();
+        const info = fileList[url];
+        if (!info) return null;
+        return new Promise(resolve => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.get(info.key);
+          req.onsuccess = () => resolve(req.result?.data || null);
+          req.onerror = () => resolve(null);
+        });
+      }
+
+      async function saveFile(url, data) {
+        await initDB();
+        const info = fileList[url];
+        if (!info) return false;
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          const entry = { data, key: info.key, timestamp: Date.now() };
+          const req = store.put(entry, info.key);
+          req.onsuccess = () => {
+            console.log(`Cached: ${info.key} (${(data.byteLength/1e6).toFixed(1)} MB)`);
+            updateCacheMessage(`Cached ${info.key}`);
+            resolve(true);
+          };
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function clearCache() {
+        await initDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.clear();
+        updateCacheMessage('Cleared');
+        // Optionally reload the page to fetch fresh files
+        if (confirm('Cache cleared. Reload page to download fresh files?')) {
+          location.reload();
         }
       }
 
-      window.addEventListener('resize', handleResize);
+      function updateCacheMessage(msg) {
+        const el = document.getElementById('cache-message');
+        if (el) el.textContent = `Cache: ${msg}`;
+      }
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/GameWeb.loader.js";
-      var config = {
-        arguments: [],
+      // Public API
+      return { init: initDB, getFile, saveFile, clearCache };
+    })();
+
+    // ==================== UNITY SETUP ====================
+    const buildUrl = "Build";
+    const loaderUrl = buildUrl + "/GameWeb.loader.js";
+    const canvas = document.querySelector("#unity-canvas");
+
+    // Override fetch to serve cached files
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+      if (typeof url === 'string') {
+        if (url.includes('GameWeb.data') || url.includes('GameWeb.wasm') || url.includes('GameWeb.framework.js')) {
+          console.log('Intercepted:', url);
+          const cached = await CacheManager.getFile(url);
+          if (cached) {
+            console.log('Serving from cache:', url);
+            return new Response(cached, {
+              status: 200,
+              headers: {
+                'Content-Type': url.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream',
+                'Content-Length': cached.byteLength
+              }
+            });
+          }
+          // Not cached: download and save asynchronously
+          const response = await originalFetch(url, options);
+          const clone = response.clone();
+          clone.arrayBuffer().then(buffer => CacheManager.saveFile(url, buffer));
+          return response;
+        }
+      }
+      return originalFetch(url, options);
+    };
+
+    // Load Unity (loader script loaded only once)
+    async function startUnity() {
+      await CacheManager.init();
+
+      // Attach clear cache button listener
+      document.getElementById('clear-cache-btn').addEventListener('click', () => {
+        CacheManager.clearCache();
+      });
+
+      // Load the loader script
+      const loaderPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = loaderUrl;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
+      });
+
+      await loaderPromise;
+
+      // Now the real createUnityInstance is available
+      const config = {
         dataUrl: buildUrl + "/GameWeb.data",
         frameworkUrl: buildUrl + "/GameWeb.framework.js",
         codeUrl: buildUrl + "/GameWeb.wasm",
@@ -111,39 +218,51 @@
         productName: "Yahtzee",
         productVersion: "1.02",
         showBanner: unityShowBanner,
-        // Match WebGL render target to canvas display size
         matchWebGLToCanvasSize: true,
-        // Use device pixel ratio for sharper display on high-DPI screens
         devicePixelRatio: window.devicePixelRatio
       };
 
-      // Remove the old desktop/mobile specific canvas size settings
-      // as we're now using CSS for responsive sizing
-
       document.querySelector("#unity-loading-bar").style.display = "block";
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-        }).then((unityInstance) => {
-          window.unityInstance = unityInstance; // Store for resize handler
-          document.querySelector("#unity-loading-bar").style.display = "none";
-          document.querySelector("#unity-fullscreen-button").onclick = () => {
-            unityInstance.SetFullscreen(1);
-          };
-          
-          // Initial resize to ensure proper scaling
-          handleResize();
-          
-        }).catch((message) => {
-          alert(message);
-        });
-      };
+      createUnityInstance(canvas, config, progress => {
+        document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+      }).then(instance => {
+        window.unityInstance = instance;
+        document.querySelector("#unity-loading-bar").style.display = "none";
+        document.querySelector("#unity-fullscreen-button").onclick = () => instance.SetFullscreen(1);
+        updateCacheMessage('Ready');
+      }).catch(err => {
+        updateCacheMessage('Failed');
+        alert(err);
+      });
+    }
 
-      document.body.appendChild(script);
+    function unityShowBanner(msg, type) {
+      var warningBanner = document.querySelector("#unity-warning");
+      function updateBannerVisibility() {
+        warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+      }
+      var div = document.createElement('div');
+      div.innerHTML = msg;
+      warningBanner.appendChild(div);
+      if (type == 'error') div.style = 'background: red; padding: 10px;';
+      else {
+        if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+        setTimeout(function() {
+          warningBanner.removeChild(div);
+          updateBannerVisibility();
+        }, 5000);
+      }
+      updateBannerVisibility();
+    }
 
-    </script>
-  </body>
+    function updateCacheMessage(msg) {
+      const el = document.getElementById('cache-message');
+      if (el) el.textContent = `Cache: ${msg}`;
+    }
+
+    // Start everything
+    startUnity();
+  </script>
+</body>
 </html>
