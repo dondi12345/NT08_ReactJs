@@ -84,4 +84,18 @@
     margin-left: 5%;
   }
 
+//   .game-container {
+//     width: 100vw;   /* 100% of the browser width */
+//     height: calc(100vh - 60px); /* 100% height MINUS your navbar height (adjust 60px as needed) */
+//     display: flex;
+// }
+
+/* 3. The iframe must fill 100% of that container */
+#unity-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
   

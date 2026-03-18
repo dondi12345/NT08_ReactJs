@@ -4,9 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start-1": "nodemon --exec ts-node src/index.ts",
-    "start": "node  ./build/index.js",
+    "start": "tsx src/index.ts",
     "build": "tsc",
-    "watch": "node-sass --watch src/resources/scss/ --output src/public/css/",
+    "watch": "node-sass --watch resources/scss/ --output public/css/",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d src"
   },
@@ -24,7 +24,7 @@
     "nodemailer": "^6.9.13",
     "react-slick": "^0.29.0",
     "sass": "^1.62.1",
-    "tsc": "^2.0.4"
+    "tsx": "^3.14.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
