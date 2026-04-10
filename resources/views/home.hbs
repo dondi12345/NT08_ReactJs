@@ -1,43 +1,587 @@
 <div class="mt-5 mb-5">
-<div class="main-carousel" data-flickity = '{ "wrapAround": true,"autoPlay":2500, "freeScroll": true, "prevNextButtons": false, "pageDots": false, "pauseAutoPlayOnClick": false}'>
-    {{>card_carousel index = 1}}
-    {{>card_carousel index = 2}}
-    {{>card_carousel index = 3}}
-    {{>card_carousel index = 4}}
-    {{>card_carousel index = 5}}
-    {{>card_carousel index = 6}}
-    {{>card_carousel index = 7}}
-    {{>card_carousel index = 8}}
-    {{>card_carousel index = 9}}
+    <div class="main-carousel"
+        data-flickity='{ "wrapAround": true,"autoPlay":2500, "freeScroll": true, "prevNextButtons": false, "pageDots": false, "pauseAutoPlayOnClick": false}'>
+        {{>card_carousel index = 1}}
+        {{>card_carousel index = 2}}
+        {{>card_carousel index = 3}}
+        {{>card_carousel index = 4}}
+        {{>card_carousel index = 5}}
+        {{>card_carousel index = 6}}
+        {{>card_carousel index = 7}}
+        {{>card_carousel index = 8}}
+        {{>card_carousel index = 9}}
+    </div>
+
 </div>
 
-{{{about}}}
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
-<h1>H1</h1>
+<div class="game-wrapper">
+    <div class="score-bar">
+        <span>🏆 SCORE: <span id="scoreVal">0</span></span>
+        <span style="font-size: 14px; color: #999;">🎮 SPACE nhảy | 🟢 C hitbox | ⏸ P pause</span>
+    </div>
+    <canvas id="gameCanvas"></canvas>
 </div>
+<div id="loadingToast" class="loading-toast" style="display:none">⏳ Đang tải animation...</div>
+
+<style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f0f0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .top-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #888;
+            background: #e8e8e8;
+        }
+        .game-wrapper {
+            width: 100%;
+            background-color: #fff;
+            position: relative;
+        }
+        .score-bar {
+            padding: 10px 20px;
+            background-color: #fff;
+            border-top: 2px solid #535353;
+            display: flex;
+            justify-content: space-between;
+            color: #535353;
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+        }
+        .loading-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #ffc107;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-family: monospace;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+
+<script src="https://unpkg.com/flickity@2/dist/flickity.pkgd.min.js"></script>
+<script>
+    (function(){
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreSpan = document.getElementById('scoreVal');
+        const loadingToast = document.getElementById('loadingToast');
+
+        // --- Ảnh nền đường (2 lớp) ---
+        const roadNear = new Image();
+        roadNear.src = 'FoxRun/road.png';
+        const roadFar = new Image();
+        roadFar.src = 'FoxRun/road_1.png';
+        
+        const OFFSET_BOTTOM = 90-15;      // 75
+
+        // ---------- ANIMATION ----------
+        const RUN_TOTAL = 26;
+        let runFrames = [];
+        const JUMP_TOTAL = 14;
+        let jumpFrames = [];
+        const FALL_TOTAL = 14;
+        let fallFrames = [];
+
+        let totalImagesToLoad = RUN_TOTAL + JUMP_TOTAL + FALL_TOTAL;
+        let imagesLoaded = 0;
+        let allFramesLoaded = false;
+
+        let currentAnim = 'run';
+        let animFrameCounter = 0;
+        let animCurrentFrame = 0;
+        let ANIM_DELAY = 2;   // sẽ cập nhật theo timeScale
+
+        function loadImage(src, onLoadCallback) {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                onLoadCallback(img);
+                imagesLoaded++;
+                if(imagesLoaded === totalImagesToLoad) {
+                    allFramesLoaded = true;
+                    loadingToast.style.display = 'none';
+                    if(!started) drawStartScreen();
+                }
+            };
+            img.onerror = () => {
+                console.warn(`⚠️ Không tải được: ${src}`);
+                const fallbackImg = new Image();
+                fallbackImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                onLoadCallback(fallbackImg);
+                imagesLoaded++;
+                if(imagesLoaded === totalImagesToLoad) {
+                    allFramesLoaded = true;
+                    loadingToast.style.display = 'none';
+                    if(!started) drawStartScreen();
+                }
+            };
+            return img;
+        }
+
+        // Tải run frames (char_run_00.png ... char_run_25.png)
+        for(let i = 0; i < RUN_TOTAL; i++) {
+            const idx = i < 10 ? '0' + i : '' + i;
+            const src = `FoxRun/char_run_${idx}.png`;
+            runFrames.push(null);
+            loadImage(src, (loadedImg) => { runFrames[i] = loadedImg; });
+        }
+
+        // Tải jump frames (char_jump_00.png ... char_jump_13.png)
+        for(let i = 0; i < JUMP_TOTAL; i++) {
+            const idx = i < 10 ? '0' + i : '' + i;
+            const src = `FoxRun/char_jump_${idx}.png`;
+            jumpFrames.push(null);
+            loadImage(src, (loadedImg) => { jumpFrames[i] = loadedImg; });
+        }
+
+        // Tải fall frames (char_fall_00.png ... char_fall_13.png)
+        for(let i = 0; i < FALL_TOTAL; i++) {
+            const idx = i < 10 ? '0' + i : '' + i;
+            const src = `FoxRun/char_fall_${idx}.png`;
+            fallFrames.push(null);
+            loadImage(src, (loadedImg) => { fallFrames[i] = loadedImg; });
+        }
+
+        setTimeout(() => {
+            if(!allFramesLoaded) loadingToast.style.display = 'block';
+        }, 200);
+
+        // --- Vật cản ---
+        const OBSTACLES = [
+            { name:'block1', src:'FoxRun/block_1.png', w:49, h:80, getY: (gY)=> gY-80+2,
+              boxes:[ [2,35,45,45],[7,0,35,35]] },
+            { name:'block2', src:'FoxRun/block_2.png', w:49, h:35, getY: (gY)=> gY-35,
+              boxes:[ [10,0,30,30]]},
+            { name:'block_3.png', src:'FoxRun/block_3.png', w:106, h:49, getY: (gY)=> gY-49-100,
+              boxes:[ [0,0,106,49] ] },
+            { name:'block4', src:'FoxRun/block_4.png', w:49, h:55, getY: (gY)=> gY-55,
+              boxes:[ [0,0,50,55]]},
+        ];
+        let obstacleImgs = {};
+        OBSTACLES.forEach(obs => {
+            let img = new Image();
+            img.src = obs.src;
+            img.onerror = () => console.warn(`Lỗi tải ${obs.src}`);
+            obstacleImgs[obs.name] = img;
+        });
+
+        // ---------- HITBOX CHO NHÂN VẬT ----------
+        const DINO_BOXES = [
+            [20, 20, 50, 50],   // Thân
+            [30, 2, 40, 20],    // Đầu
+            [30, 70, 30, 15]    // Chân
+        ];
+
+        // Biến game
+        let started = false;
+        let gameOver = false;
+        let paused = false;
+        let canRestart = true;
+        let restartTimer = null;
+        let score = 0;
+        let gameSpeed = 6;
+        let timeScale = 1;          // Thay đổi ở đây (2, 3, 4, ...)
+
+        // Giá trị vật lý cơ bản (ứng với timeScale = 1)
+        const BASE_GRAVITY = 0.7;
+        const BASE_JUMP_POWER = -15;
+        
+        // Giá trị sẽ được cập nhật theo timeScale
+        let currentGravity = BASE_GRAVITY;
+        let currentJumpPower = BASE_JUMP_POWER;
+        
+        let obstaclesList = [];
+        let frameCount = 0;
+        
+        let offsetNear = 0;
+        let offsetFar = 0;
+        const farSpeedFactor = 0.3;
+
+        const dino = {
+            w: 80, h: 90, x: 0, y: 0, dy: 0,
+            grounded: true,
+            groundY: 0
+        };
+
+        let showHitbox = false;
+
+        // Cập nhật các thông số phụ thuộc timeScale
+        function updateTimeScaleParameters() {
+            // Giữ quãng đường nhảy không đổi
+            currentGravity = BASE_GRAVITY * timeScale * timeScale;
+            currentJumpPower = BASE_JUMP_POWER * timeScale;
+            
+            // Tốc độ animation cũng tăng theo timeScale (để chạy bộ khớp với tốc độ game)
+            ANIM_DELAY = Math.max(1, Math.floor(2 / timeScale));
+        }
+        
+        // Gọi ngay khi khởi tạo
+        updateTimeScaleParameters();
+
+        function updateAnimation() {
+            if(!started || gameOver) return;
+            let newAnim = currentAnim;
+            if(dino.grounded) newAnim = 'run';
+            else newAnim = (dino.dy < 0) ? 'jump' : 'fall';
+
+            if(newAnim !== currentAnim) {
+                currentAnim = newAnim;
+                animFrameCounter = 0;
+                animCurrentFrame = 0;
+            }
+            animFrameCounter++;
+            if(animFrameCounter >= ANIM_DELAY) {
+                animFrameCounter = 0;
+                let maxFrame = (currentAnim === 'run') ? RUN_TOTAL : (currentAnim === 'jump') ? JUMP_TOTAL : FALL_TOTAL;
+                animCurrentFrame = (animCurrentFrame + 1) % maxFrame;
+            }
+        }
+
+        function drawCharacter() {
+            let img = null;
+            if(currentAnim === 'run' && runFrames[animCurrentFrame]) img = runFrames[animCurrentFrame];
+            else if(currentAnim === 'jump' && jumpFrames[animCurrentFrame]) img = jumpFrames[animCurrentFrame];
+            else if(currentAnim === 'fall' && fallFrames[animCurrentFrame]) img = fallFrames[animCurrentFrame];
+
+            if(img && img.complete) {
+                ctx.drawImage(img, dino.x, dino.y, dino.w, dino.h);
+            } else {
+                ctx.fillStyle = "#2c3e66";
+                ctx.fillRect(dino.x, dino.y, dino.w, dino.h);
+                ctx.fillStyle = "#ecf0f1";
+                ctx.font = "bold 20px monospace";
+                ctx.fillText("🦖", dino.x+30, dino.y+60);
+                if(!allFramesLoaded) {
+                    ctx.fillStyle = "#e67e22";
+                    ctx.font = "12px monospace";
+                    ctx.fillText("loading...", dino.x+10, dino.y-5);
+                }
+            }
+            
+            if(showHitbox) {
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = "#00ff00";
+                ctx.strokeStyle = "#00aa00";
+                ctx.lineWidth = 2;
+                for(let box of DINO_BOXES) {
+                    let bx = dino.x + box[0], by = dino.y + box[1], bw = box[2], bh = box[3];
+                    ctx.fillRect(bx, by, bw, bh);
+                    ctx.strokeRect(bx, by, bw, bh);
+                }
+                ctx.restore();
+            }
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = 350;
+            dino.groundY = canvas.height - OFFSET_BOTTOM;
+            dino.x = canvas.width/2 - dino.w/2;
+            if(!gameOver) dino.y = dino.groundY - dino.h;
+        }
+
+        function handleAction() {
+            if(!started) {
+                started = true;
+                paused = false;
+                currentAnim = 'run';
+                animCurrentFrame = 0;
+                animFrameCounter = 0;
+                animate();
+                return;
+            }
+            if(gameOver) {
+                if(canRestart) restartGame();
+                return;
+            }
+            if(paused) return;
+            if(dino.grounded) {
+                dino.dy = currentJumpPower;
+                dino.grounded = false;
+            }
+        }
+
+        function togglePause() {
+            if(!started || gameOver) return;
+            paused = !paused;
+        }
+
+        function spawnObstacle() {
+            let type = OBSTACLES[Math.floor(Math.random() * OBSTACLES.length)];
+            obstaclesList.push({
+                x: canvas.width,
+                y: type.getY(dino.groundY),
+                type: type.name,
+                w: type.w,
+                h: type.h,
+                boxes: type.boxes
+            });
+        }
+
+        function restartGame() {
+            if(restartTimer) clearTimeout(restartTimer);
+            score = 0;
+            scoreSpan.innerText = '0';
+            obstaclesList = [];
+            gameSpeed = 6;
+            gameOver = false;
+            paused = false;
+            canRestart = true;
+            dino.dy = 0;
+            dino.y = dino.groundY - dino.h;
+            dino.grounded = true;
+            offsetNear = 0;
+            offsetFar = 0;
+            currentAnim = 'run';
+            animCurrentFrame = 0;
+            animFrameCounter = 0;
+            frameCount = 0;
+        }
+
+        function triggerGameOver() {
+            if(gameOver) return;
+            gameOver = true;
+            paused = false;
+            canRestart = false;
+            if(restartTimer) clearTimeout(restartTimer);
+            restartTimer = setTimeout(() => { canRestart = true; }, 1000);
+        }
+
+        function drawObstacle(obs) {
+            let img = obstacleImgs[obs.type];
+            if(img && img.complete) ctx.drawImage(img, obs.x, obs.y, obs.w, obs.h);
+            else { ctx.fillStyle="#ff4d4d"; ctx.fillRect(obs.x, obs.y, obs.w, obs.h); }
+            if(showHitbox && obs.boxes) {
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = "#00ff00";
+                ctx.strokeStyle = "#00aa00";
+                ctx.lineWidth = 2;
+                for(let box of obs.boxes) {
+                    let bx = obs.x + box[0], by = obs.y + box[1], bw = box[2], bh = box[3];
+                    ctx.fillRect(bx, by, bw, bh);
+                    ctx.strokeRect(bx, by, bw, bh);
+                }
+                ctx.restore();
+            }
+        }
+
+        function drawRoadLayer(img, offsetX, yPos) {
+            if(!img.complete) return;
+            const w = img.width;
+            let startX = ((offsetX % w) + w) % w;
+            for(let x = -w*2; x <= canvas.width + w*2; x += w) {
+                ctx.drawImage(img, x + startX, yPos, w, img.height);
+                ctx.drawImage(img, x + startX - 1, yPos, w, img.height);
+            }
+        }
+
+        function drawAllRoads() {
+            const farY = canvas.height - roadFar.height - 55;
+            drawRoadLayer(roadFar, offsetFar, farY);
+            const nearY = canvas.height - roadNear.height;
+            drawRoadLayer(roadNear, offsetNear, nearY);
+        }
+
+        function drawStartScreen() {
+            if(!allFramesLoaded) {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                drawAllRoads();
+                ctx.fillStyle = "#535353";
+                ctx.font = "bold 18px monospace";
+                ctx.textAlign = "center";
+                ctx.fillText("Đang tải animation...", canvas.width/2, canvas.height/2);
+                return;
+            }
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            drawAllRoads();
+            drawCharacter();
+            ctx.fillStyle = "#3a2c1f";
+            ctx.font = "bold 24px 'Courier New', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("⚡ NHẤN SPACE ĐỂ BẮT ĐẦU ⚡", canvas.width/2, canvas.height/2 - 30);
+            ctx.font = "14px monospace";
+            ctx.fillStyle = "#6b5a48";
+            ctx.fillText(`TimeScale = ${timeScale} (giữ quãng đường nhảy)`, canvas.width/2, canvas.height/2 + 25);
+        }
+
+        function checkCollision(dinoRect, dinoBoxes, obs) {
+            if(!obs.boxes) return false;
+            for(let dbox of dinoBoxes) {
+                let dLeft = dinoRect.x + dbox[0];
+                let dTop = dinoRect.y + dbox[1];
+                let dRight = dLeft + dbox[2];
+                let dBottom = dTop + dbox[3];
+                for(let obox of obs.boxes) {
+                    let oLeft = obs.x + obox[0];
+                    let oTop = obs.y + obox[1];
+                    let oRight = oLeft + obox[2];
+                    let oBottom = oTop + obox[3];
+                    if(dRight > oLeft && dLeft < oRight && dBottom > oTop && dTop < oBottom) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function drawPauseOverlay() {
+            ctx.fillStyle = "rgba(0,0,0,0.65)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#f0f0d0";
+            ctx.font = "bold 36px 'Courier New', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("⏸ PAUSED", canvas.width/2, canvas.height/2 - 30);
+            ctx.font = "18px monospace";
+            ctx.fillStyle = "#dddd88";
+            ctx.fillText("Nhấn P để tiếp tục", canvas.width/2, canvas.height/2 + 30);
+        }
+
+        function drawGameOverOverlay() {
+            ctx.fillStyle = "rgba(0,0,0,0.7)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#ffcc88";
+            ctx.font = "bold 36px 'Courier New', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("💀 GAME OVER 💀", canvas.width/2, canvas.height/2 - 40);
+            ctx.font = "20px monospace";
+            ctx.fillStyle = "#f5e6d3";
+            ctx.fillText("Nhấn SPACE để chơi lại", canvas.width/2, canvas.height/2 + 30);
+        }
+
+        // Vòng lặp chính
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if(!started) {
+                if(allFramesLoaded) drawStartScreen();
+                return;
+            }
+            
+            if(!gameOver && !paused) {
+                // Parallax (có nhân timeScale)
+                offsetNear -= gameSpeed * timeScale;
+                offsetFar -= gameSpeed * farSpeedFactor * timeScale;
+                
+                // Vật lý dino (dùng currentGravity đã được scale)
+                dino.dy += currentGravity;
+                dino.y += dino.dy;
+                if(dino.y + dino.h >= dino.groundY) {
+                    dino.y = dino.groundY - dino.h;
+                    dino.dy = 0;
+                    dino.grounded = true;
+                } else {
+                    dino.grounded = false;
+                }
+                
+                updateAnimation();
+                
+                // Spawn vật cản (tốc độ sinh tỉ lệ nghịch với timeScale)
+                frameCount++;
+                let originalDelay = Math.max(70, 90 - Math.floor(gameSpeed/1.5));
+                let spawnDelay = Math.floor(originalDelay / timeScale);
+                if(spawnDelay < 2) spawnDelay = 2;
+                if(frameCount >= spawnDelay) {
+                    spawnObstacle();
+                    frameCount = 0;
+                    if(gameSpeed > 9 && Math.random()<0.2 && obstaclesList.length<2) spawnObstacle();
+                }
+                
+                // Cập nhật vị trí vật cản (nhân timeScale)
+                let dinoRect = { x:dino.x, y:dino.y, w:dino.w, h:dino.h };
+                for(let i=obstaclesList.length-1; i>=0; i--) {
+                    let obs = obstaclesList[i];
+                    obs.x -= gameSpeed * timeScale;
+                    if(checkCollision(dinoRect, DINO_BOXES, obs)) { 
+                        triggerGameOver(); 
+                    }
+                    if(obs.x + obs.w < 0) {
+                        obstaclesList.splice(i,1);
+                        score++;
+                        scoreSpan.innerText = score;
+                        // Tăng dần gameSpeed (tốc độ cơ bản) theo điểm
+                        if(score % 5 === 0 ){
+                            {{!-- if(gameSpeed < 13){
+                                gameSpeed += 0.5;
+                            } --}}
+                            if(timeScale < 4){
+                                timeScale += 0.05;
+                            }
+                        }
+                    }
+                } 
+            }
+            
+            // Vẽ toàn bộ
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawAllRoads();
+            drawCharacter();
+            for(let obs of obstaclesList) {
+                drawObstacle(obs);
+            }
+            
+            if(paused && !gameOver) drawPauseOverlay();
+            if(gameOver) drawGameOverOverlay();
+        }
+        
+        // --- Sự kiện ---
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyC') { e.preventDefault(); showHitbox = !showHitbox; }
+            if(e.code === 'KeyP') { e.preventDefault(); togglePause(); }
+            if(e.code === 'Space') {
+                e.preventDefault();
+                handleAction();
+            }
+        });
+        canvas.addEventListener('mousedown', handleAction);
+        window.addEventListener('resize', () => { 
+            resize(); 
+            if(!started) drawStartScreen();
+            else if(!gameOver) {
+                dino.groundY = canvas.height - OFFSET_BOTTOM;
+                dino.x = canvas.width/2 - dino.w/2;
+                if(dino.grounded) dino.y = dino.groundY - dino.h;
+            }
+        });
+        
+        let roadLoadedCount = 0;
+        function onRoadLoad() {
+            roadLoadedCount++;
+            if(roadLoadedCount === 2 && !started) drawStartScreen();
+        }
+        roadNear.onload = onRoadLoad;
+        roadFar.onload = onRoadLoad;
+        if(roadNear.complete) onRoadLoad();
+        if(roadFar.complete) onRoadLoad();
+        
+        resize();
+        if(allFramesLoaded) drawStartScreen();
+        else {
+            ctx.fillStyle = "#ddd";
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#333";
+            ctx.font = "16px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("Đang tải animation...", canvas.width/2, canvas.height/2);
+        }
+    })();
+</script>
