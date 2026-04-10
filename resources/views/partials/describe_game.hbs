@@ -5,20 +5,24 @@
         </div>
         <div class="col-6 ps-5 pe-4" style="width: 500px;">
             <h1>{{title}}</h1>
-            <span class="describe_game_describe">Life is Strange is a critically acclaimed episodic adventure game developed by Dontnod Entertainment. The game follows the story of a teenage girl named Maxine "Max" Caulfield, who discovers she has the ability to rewind time. As she struggles to come to,...</span>
+            <span class="describe_game_describe">Life is Strange is a critically acclaimed episodic adventure game
+                developed by Dontnod Entertainment. The game follows the story of a teenage girl named Maxine "Max"
+                Caulfield, who discovers she has the ability to rewind time. As she struggles to come to,...</span>
             <div class="row mt-4">
                 <div class="col-6 align-self-center">
                     <div class="row justify-content-start">
                         <button type="button" class="col-auto btn btn-outline-secondary m-1">Read more</button>
-                        <a type="button" class="col-auto btn btn-outline-secondary m-1" href={{url_play}}>Play</a>
+                        <button type="button" class="col-auto btn btn-outline-secondary m-1 js-play-popup" data-url="{{url_play}}">Play</button>
                     </div>
                 </div>
                 <div class="col-6 align-self-center">
                     <div class="row justify-content-end">
-                        <button type="button" class="col-auto btn btn-outline-secondary m-1" style="width: 40px; height: 40px;">
+                        <button type="button" class="col-auto btn btn-outline-secondary m-1"
+                            style="width: 40px; height: 40px;">
                             <i class="fa-brands fa-apple"></i>
                         </button>
-                        <button type="button" class="col-auto btn btn-outline-secondary m-1" style="width: 40px; height: 40px;">
+                        <button type="button" class="col-auto btn btn-outline-secondary m-1"
+                            style="width: 40px; height: 40px;">
                             <i class="fa-brands fa-google-play"></i>
                         </button>
                     </div>
@@ -27,3 +31,35 @@
         </div>
     </div>
 </div>
+
+<script>
+  // Wait for the DOM to be ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Use event delegation: listen for clicks on the whole document
+    document.addEventListener('click', function(event) {
+      // Check if the clicked element (or its parent) has the class 'js-play-popup'
+      const playButton = event.target.closest('.js-play-popup');
+      if (!playButton) return; // not a play button
+
+      // Prevent any default action (like following a link)
+      event.preventDefault();
+
+      // Get the game URL from the data-url attribute
+      const gameUrl = playButton.dataset.url;
+      if (!gameUrl) {
+        console.error('No game URL specified');
+        return;
+      }
+
+      // Popup dimensions
+      const width = 1280;
+      const height = 720;
+      const left = (screen.width / 2) - (width / 2);
+      const top = (screen.height / 2) - (height / 2);
+      const windowName = 'GamePopup_' + btoa(gameUrl);
+      // Open popup
+      window.open(gameUrl, windowName,
+        `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`);
+    });
+  });
+</script>

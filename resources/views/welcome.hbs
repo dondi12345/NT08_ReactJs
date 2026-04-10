@@ -1,0 +1,6 @@
+<h1>Login</h1>
+{{#if user}}
+  <p>Hello, {{user.displayName}}! <a href="/profile">Profile</a> | <a href="/logout">Logout</a></p>
+{{else}}
+  <p><a href="/login">Login with Google</a></p>
+{{/if}}

@@ -7,8 +7,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const path_1 = __importDefault(require("path"));
 const express_1 = __importDefault(require("express"));
 const express_handlebars_1 = require("express-handlebars");
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const app = (0, express_1.default)();
 const port = 8000;
+const port_ssl = 8001;
 //HTTP logger
 // app.use(morgan('combined'));
 app.use(express_1.default.static(path_1.default.join(__dirname, "../public")));
@@ -37,6 +41,15 @@ app.get('/contact', (req, res) => {
 app.get('/test', (req, res) => {
     res.render('partials/test');
 });
-app.listen(port, () => {
+const server = http.createServer(app);
+server.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
+});
+const options = {
+    key: fs.readFileSync("server.key"),
+    cert: fs.readFileSync("server.crt"),
+};
+const server_ssl = https.createServer(options, app);
+server_ssl.listen(port_ssl, "0.0.0.0", () => {
+    console.log(`Worker ${process.pid} API listening on port: ${port_ssl}`);
 });
